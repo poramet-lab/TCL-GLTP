@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TCI-GLTP v3</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; background: #f7f9fc; color: #1f2532; }
+    h1 { margin: 0 0 12px 0; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    select, input { padding: 8px 10px; border: 1px solid #ccd6e6; border-radius: 8px; }
+    button { padding: 8px 12px; border: 0; border-radius: 8px; background: #0f5ec7; color: #fff; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: #fff; border: 1px solid #dfe5ef; border-radius: 10px; overflow: hidden; }
+    .card h3 { margin: 0; padding: 10px 12px; background: #f3f6fb; font-size: 15px; }
+    .list { max-height: 72vh; overflow: auto; }
+    .item { padding: 10px 12px; border-top: 1px solid #edf1f7; cursor: pointer; }
+    .item:hover { background: #f8fbff; }
+    .meta { color: #5e6778; font-size: 12px; }
+    .msg { padding: 10px 12px; border-top: 1px solid #edf1f7; }
+    .msg .meta { margin-bottom: 4px; }
+    .USER { border-left: 4px solid #2f7fd8; }
+    .AI { border-left: 4px solid #1e9a6c; }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>TCI-GLTP v3</h1>
+  <div class="row">
+    <label>Owner
+      <select id="owner">
+        <option value="">All</option>
+        <option value="poramet">poramet</option>
+        <option value="support">support</option>
+        <option value="first">first</option>
+      </select>
+    </label>
+    <button id="reload">Reload</button>
+    <span class="meta" id="status"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Sessions</h3>
+      <div id="sessions" class="list"></div>
+    </div>
+    <div class="card">
+      <h3>Messages</h3>
+      <div id="messages" class="list"></div>
+    </div>
+  </div>
+
+  <script>
+    const owner = document.getElementById('owner');
+    const reloadBtn = document.getElementById('reload');
+    const sessionsEl = document.getElementById('sessions');
+    const messagesEl = document.getElementById('messages');
+    const statusEl = document.getElementById('status');
+
+    async function loadSessions() {
+      const query = owner.value ? `?owner=${encodeURIComponent(owner.value)}` : '';
+      const res = await fetch(`/api/sessions${query}`);
+      const data = await res.json();
+      sessionsEl.innerHTML = '';
+      data.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `<div>${s.session_id}</div><div class="meta">${s.started_at_bkk || '-'} -> ${s.ended_at_bkk || '-'} | ${s.message_count} msgs</div>`;
+        div.onclick = () => loadMessages(s.session_id);
+        sessionsEl.appendChild(div);
+      });
+      statusEl.textContent = `Sessions: ${data.length}`;
+    }
+
+    async function loadMessages(sessionId) {
+      const res = await fetch(`/api/messages?session_id=${encodeURIComponent(sessionId)}`);
+      const data = await res.json();
+      messagesEl.innerHTML = '';
+      data.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `msg ${m.role}`;
+        div.innerHTML = `<div class="meta">${m.ts_bkk} | ${m.role}</div><div>${(m.text || '').replaceAll('<', '&lt;')}</div>`;
+        messagesEl.appendChild(div);
+      });
+    }
+
+    owner.onchange = loadSessions;
+    reloadBtn.onclick = loadSessions;
+
+    loadSessions();
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadSessions();
+      }
+    }, 10000);
+  </script>
+</body>
+</html>

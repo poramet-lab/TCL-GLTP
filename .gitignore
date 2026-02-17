@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# OS/Editor
+.DS_Store
+.vscode/
+
+# Runtime
+*.log
+*.pid
+.env
+
+# Data outputs
+data/raw/*
+data/processed/*
+reports/*
+
+# Keep folders
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!reports/.gitkeep
