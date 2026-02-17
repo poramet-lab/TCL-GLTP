@@ -7,9 +7,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from tci_gltp.config import DB_PATH, ROOT
+from tci_gltp.config import DB_PATH, ROOT, SESSION_ROOTS
 
 WEB_ROOT = ROOT / "web"
+MAX_LIMIT = 500
+DEFAULT_LIMIT = 100
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -24,6 +26,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _error(self, code: str, message: str, status: int = 400) -> None:
+        return self._json({"error": {"code": code, "message": message}}, status=status)
+
+    def _parse_limit(self, raw: str | None) -> int | None:
+        if raw is None or raw == "":
+            return DEFAULT_LIMIT
+        try:
+            value = int(raw)
+        except ValueError:
+            return None
+        if value <= 0:
+            return None
+        return min(value, MAX_LIMIT)
+
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
@@ -32,7 +48,12 @@ class Handler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/sessions":
             q = parse_qs(parsed.query)
             owner = (q.get("owner") or [""])[0].strip()
-            limit = min(int((q.get("limit") or ["100"])[0]), 500)
+            limit = self._parse_limit((q.get("limit") or [None])[0])
+            if limit is None:
+                return self._error("INVALID_LIMIT", f"limit must be a positive integer (1-{MAX_LIMIT})")
+            if owner and owner not in SESSION_ROOTS:
+                allowed = ", ".join(sorted(SESSION_ROOTS.keys()))
+                return self._error("INVALID_OWNER", f"owner must be one of: {allowed}")
             with sqlite3.connect(DB_PATH) as conn:
                 conn.row_factory = sqlite3.Row
                 if owner:
@@ -60,9 +81,9 @@ class Handler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/messages":
             q = parse_qs(parsed.query)
-            session_id = (q.get("session_id") or [""])[0]
+            session_id = (q.get("session_id") or [""])[0].strip()
             if not session_id:
-                return self._json({"error": "session_id is required"}, status=400)
+                return self._error("MISSING_SESSION_ID", "session_id is required")
             with sqlite3.connect(DB_PATH) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(

@@ -36,6 +36,9 @@
       </select>
     </label>
     <button id="reload">Reload</button>
+    <button id="downloadJson" disabled>Download JSON</button>
+    <button id="downloadCsv" disabled>Download CSV</button>
+    <button id="downloadMd" disabled>Download Markdown</button>
     <span class="meta" id="status"></span>
   </div>
 
@@ -56,6 +59,33 @@
     const sessionsEl = document.getElementById('sessions');
     const messagesEl = document.getElementById('messages');
     const statusEl = document.getElementById('status');
+    const downloadJsonBtn = document.getElementById('downloadJson');
+    const downloadCsvBtn = document.getElementById('downloadCsv');
+    const downloadMdBtn = document.getElementById('downloadMd');
+    let currentSessionId = '';
+    let currentMessages = [];
+
+    function sanitizeFileName(input) {
+      return (input || 'session').replace(/[^a-zA-Z0-9._-]+/g, '_');
+    }
+
+    function downloadTextFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function setDownloadEnabled(enabled) {
+      downloadJsonBtn.disabled = !enabled;
+      downloadCsvBtn.disabled = !enabled;
+      downloadMdBtn.disabled = !enabled;
+    }
 
     async function loadSessions() {
       const query = owner.value ? `?owner=${encodeURIComponent(owner.value)}` : '';
@@ -75,6 +105,9 @@
     async function loadMessages(sessionId) {
       const res = await fetch(`/api/messages?session_id=${encodeURIComponent(sessionId)}`);
       const data = await res.json();
+      currentSessionId = sessionId;
+      currentMessages = data;
+      setDownloadEnabled(data.length > 0);
       messagesEl.innerHTML = '';
       data.forEach(m => {
         const div = document.createElement('div');
@@ -84,9 +117,44 @@
       });
     }
 
+    function toCsv(rows) {
+      const header = ['ts_bkk', 'role', 'text'];
+      const lines = [header.join(',')];
+      rows.forEach(r => {
+        const escaped = [r.ts_bkk || '', r.role || '', r.text || ''].map(v => `"${String(v).replaceAll('"', '""')}"`);
+        lines.push(escaped.join(','));
+      });
+      return lines.join('\n');
+    }
+
+    function toMarkdown(sessionId, rows) {
+      const lines = [`# Session: ${sessionId}`, ''];
+      rows.forEach(r => {
+        lines.push(`## ${r.ts_bkk} | ${r.role}`);
+        lines.push('');
+        lines.push(r.text || '');
+        lines.push('');
+      });
+      return lines.join('\n');
+    }
+
     owner.onchange = loadSessions;
     reloadBtn.onclick = loadSessions;
+    downloadJsonBtn.onclick = () => {
+      if (!currentSessionId || currentMessages.length === 0) return;
+      const payload = JSON.stringify({ session_id: currentSessionId, messages: currentMessages }, null, 2);
+      downloadTextFile(payload, `${sanitizeFileName(currentSessionId)}.json`, 'application/json;charset=utf-8');
+    };
+    downloadCsvBtn.onclick = () => {
+      if (!currentSessionId || currentMessages.length === 0) return;
+      downloadTextFile(toCsv(currentMessages), `${sanitizeFileName(currentSessionId)}.csv`, 'text/csv;charset=utf-8');
+    };
+    downloadMdBtn.onclick = () => {
+      if (!currentSessionId || currentMessages.length === 0) return;
+      downloadTextFile(toMarkdown(currentSessionId, currentMessages), `${sanitizeFileName(currentSessionId)}.md`, 'text/markdown;charset=utf-8');
+    };
 
+    setDownloadEnabled(false);
     loadSessions();
     setInterval(() => {
       if (document.visibilityState === 'visible') {

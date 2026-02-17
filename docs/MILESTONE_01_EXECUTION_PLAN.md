@@ -1,59 +1,89 @@
-# Milestone 01 Execution Plan
+# แผนดำเนินงาน Milestone 01
 
 ## Objective
-Stabilize the V3 foundation so the team can use it daily for live visibility and reliable history lookup.
+ทำให้ V3 foundation เสถียรพอสำหรับใช้งานประจำวัน เพื่อดูสถานะการสนทนาแบบ live และค้นประวัติได้อย่างเชื่อถือได้
+
+## สถานะปัจจุบัน (อัปเดตล่าสุด: 2026-02-17)
+- เสร็จแล้ว:
+- Ingestion watcher + API server + dashboard ใช้งานได้
+- มีสคริปต์ `start_v3.sh`, `stop_v3.sh`, `status_v3.sh`
+- Dashboard รองรับ owner filter, session/message view และ auto-refresh (active tab)
+- รองรับการดาวน์โหลดต่อ session: `JSON`, `CSV`, `Markdown`
+- API hardening สำหรับ query params และรูปแบบ error `400` มาตรฐานเสร็จแล้ว
+- เอกสาร `API Reference` และ `Smoke Test Report` เสร็จแล้ว
+- เอกสารหลักปรับเป็นภาษาไทยเรียบร้อย
+- ค้างดำเนินการ:
+- ปิดเอกสาร release note ของ M01 และเริ่มแผน M02
 
 ## In Scope
-1. Ingestion stability for all configured users
-2. API reliability and predictable response shape
-3. Dashboard usability for daily operation
-4. Operational scripts for start/stop/status
-5. Baseline governance notes (ACL and data handling)
+1. ความเสถียรของ Ingestion สำหรับผู้ใช้ทุกคนที่ตั้งค่าไว้
+2. ความน่าเชื่อถือของ API และรูปแบบ response ที่สม่ำเสมอ
+3. การใช้งาน Dashboard ให้ลื่นในงานประจำวัน
+4. Operational scripts สำหรับ start/stop/status
+5. Governance baseline (ACL และ data handling)
 
 ## Work Packages
 1. Data Ingestion
-- Validate all source roots are readable
-- Add ingestion counters in logs (sessions/messages)
-- Ensure re-run safety (no duplicated messages)
+- ตรวจว่า source roots อ่านได้ครบ
+- เพิ่มตัวเลข ingestion counters ใน logs (sessions/messages)
+- ยืนยันว่า re-run แล้วไม่เกิดข้อมูลซ้ำ
 
 2. API Contract
-- Confirm endpoint behavior and default limits
-- Add lightweight error responses for invalid params
-- Document sample responses
+- ยืนยันพฤติกรรม endpoint และ default limits
+- เพิ่ม error response แบบเบาสำหรับ invalid params
+- จัดทำตัวอย่าง response สำหรับอ้างอิง
 
 3. Dashboard
-- Keep owner filter and session/message navigation fast
-- Maintain periodic refresh when tab is active
-- Ensure mobile width does not break core usage
+- ให้ owner filter และการเปิด session/message ทำงานเร็ว
+- คง periodic refresh เมื่อแท็บ active
+- ตรวจให้ใช้งานบนหน้าจอมือถือได้โดยไม่พัง
 
 4. Operations
-- Start script launches watcher + API server
-- Stop script cleanly stops both processes
-- Status script reports PID, port, and health endpoint
+- start script ต้องเปิด watcher + API server ได้ครบ
+- stop script ต้องหยุดทั้งสอง process อย่างสะอาด
+- status script ต้องรายงาน PID, port, health endpoint
 
 5. Governance Baseline
-- Confirm ACL read access for all target users
-- Keep raw source untouched; process into analytics DB only
-- Keep logs and DB paths explicit and auditable
+- ตรวจ ACL read access ครบทุก user เป้าหมาย
+- ไม่แก้ไฟล์ raw source โดยตรง
+- ระบุที่เก็บ logs/DB ให้ตรวจสอบย้อนหลังได้
 
 ## Definition of Done
-- `./scripts/start_v3.sh` starts successfully
-- `./scripts/status_v3.sh` reports healthy runtime
-- Dashboard loads and can browse at least one session per owner
-- `GET /api/health` returns `{ "ok": true }`
-- `GET /api/sessions` and `GET /api/messages` return valid JSON
+- `./scripts/start_v3.sh` เริ่มระบบได้สำเร็จ
+- `./scripts/status_v3.sh` รายงานสถานะ healthy
+- Dashboard เปิดได้และดูอย่างน้อย 1 session ต่อ owner ได้
+- `GET /api/health` ตอบ `{ "ok": true }`
+- `GET /api/sessions` และ `GET /api/messages` ตอบ JSON ถูกต้อง
+
+## Definition of Done (Checklist)
+- [x] Start/Stop/Status scripts ใช้งานได้
+- [x] Dashboard ใช้งานได้จริงจากข้อมูลหลาย owner
+- [x] Health endpoint ใช้งานได้
+- [x] ดาวน์โหลด `JSON/CSV/Markdown` ได้จากหน้า dashboard
+- [x] API input validation ครบตามที่ตกลง
+- [x] เอกสาร API examples พร้อมสำหรับทีมใช้งาน
+- [x] Smoke test รอบสุดท้ายผ่านและบันทึกผล
 
 ## Risks
-- ACL drift causing partial ingestion visibility
-- Large session files increasing ingestion latency
-- Accidental process stop without monitoring
+- ACL เปลี่ยนจนเห็นข้อมูลไม่ครบ
+- ไฟล์ session ขนาดใหญ่ทำให้ ingestion ช้าลง
+- process ถูกปิดโดยไม่มี monitoring
 
 ## Mitigation
-- Keep status check script and quick runbook
-- Use periodic manual verification until monitoring is added
-- Add alerting/cron supervision in Milestone 02
+- ใช้ status script เป็น routine check
+- ทำ manual verification เป็นระยะจนกว่าจะมี monitoring
+- เพิ่ม alerting/cron supervision ใน Milestone 02
 
 ## Next Milestone Preview (M02)
 - Structured tagging pipeline (`project`, `intent`, `status`)
 - Daily/weekly AI insight generation
-- Role-based access model and retention policy
+- Role-based access model และ retention policy
+
+## งานถัดไป (ลำดับแนะนำ)
+1. ปิด Milestone 01
+- สร้าง release note สั้นสำหรับทีมใช้งานจริง
+- ยืนยัน baseline ที่อนุมัติแล้ว (API + Dashboard + Download)
+2. เริ่ม Milestone 02
+- ออกแบบ structured tagging (`project`, `intent`, `status`)
+- ออกแบบ daily/weekly AI insight report
+- กำหนด role-based access และ retention policy

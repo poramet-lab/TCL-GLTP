@@ -1,54 +1,55 @@
 # TCI-GLTP
 
-Team Conversation Intelligence for GLTP.
+Team Conversation Intelligence สำหรับ GLTP
 
-## Purpose
-TCI-GLTP collects Codex session conversations from multiple team users, converts them into structured data, and serves both:
-- an operational viewer (near real-time)
-- an analytics base for AI insight generation
+## วัตถุประสงค์
+TCI-GLTP ใช้สำหรับรวบรวมบทสนทนาใน Codex session จากผู้ใช้หลายคน แปลงเป็นข้อมูลเชิงโครงสร้าง และรองรับทั้ง:
+- Operational viewer (near real-time) สำหรับติดตามงานประจำวัน
+- Analytics base สำหรับต่อยอด AI insight
 
-## Current Scope (V3 Foundation)
-- Multi-user session ingestion from `.codex/sessions`
+## ขอบเขตปัจจุบัน (V3 Foundation)
+- Multi-user session ingestion จาก `.codex/sessions`
 - SQLite schema (`sessions`, `messages`)
-- API endpoints for sessions/messages
-- Web dashboard for browsing timeline and content
-- Background watcher for automatic ingestion updates
+- API endpoints สำหรับดึง sessions/messages
+- Web dashboard สำหรับดู timeline/เนื้อหาการสนทนา และดาวน์โหลด `JSON/CSV/Markdown` ต่อ session
+- Background watcher สำหรับอัปเดตข้อมูลอัตโนมัติ
 
-## Repository Layout
-- `src/tci_gltp/` core application
-- `web/` frontend dashboard
-- `scripts/start_v3.sh` start ingest watcher + API/web
-- `scripts/stop_v3.sh` stop background services
-- `scripts/status_v3.sh` runtime health/status check
-- `data/processed/tci_gltp.sqlite3` analytics database
-- `docs/` architecture and milestone docs
+## โครงสร้าง Repository
+- `src/tci_gltp/` โค้ดหลักของระบบ
+- `web/` หน้า dashboard
+- `scripts/start_v3.sh` เริ่ม ingest watcher + API/web
+- `scripts/stop_v3.sh` หยุด background services
+- `scripts/status_v3.sh` ตรวจสถานะ runtime
+- `data/processed/tci_gltp.sqlite3` ฐานข้อมูล analytics
+- `docs/` เอกสาร architecture และ milestone
 
-## Prerequisites
+## ข้อกำหนดก่อนใช้งาน
 - Python 3.10+
-- ACL permissions allowing read access to each source session root
-- Linux environment (current scripts target bash)
+- มี ACL ที่อนุญาตให้อ่าน source session roots ได้ครบ
+- สภาพแวดล้อม Linux (scripts ปัจจุบันเป็น bash)
 
-## Configured Session Sources
-Defined in `src/tci_gltp/config.py`:
+## แหล่ง Session ที่ตั้งค่าไว้
+กำหนดใน `src/tci_gltp/config.py`:
 - `/home/poramet/.codex/sessions`
 - `/home/support/.codex/sessions`
 - `/home/first/.codex/sessions`
 
-## Run
+## วิธีรันระบบ
 ```bash
 cd /workspace/TCI-GLTP
 ./scripts/start_v3.sh
 ```
 
-Open dashboard:
+เปิด dashboard:
 - `http://127.0.0.1:8020/`
+- `http://192.168.1.88:8020/`
 
-## Stop
+## วิธีหยุดระบบ
 ```bash
 ./scripts/stop_v3.sh
 ```
 
-## Check Runtime Status
+## วิธีตรวจสถานะ
 ```bash
 ./scripts/status_v3.sh
 ```
@@ -58,10 +59,13 @@ Open dashboard:
 - `GET /api/sessions?owner=<owner>&limit=<n>`
 - `GET /api/messages?session_id=<session_id>`
 
-## Data Notes
-- Source timestamps are UTC (`Z`)
-- Display timestamps are converted to Asia/Bangkok (`+07`)
-- Ingestion is idempotent (`messages` keyed by deterministic `message_id`)
+## หมายเหตุด้านข้อมูล
+- เวลาใน source เป็น UTC (`Z`)
+- เวลาแสดงผลถูกแปลงเป็น Asia/Bangkok (`+07`)
+- Ingestion เป็นแบบ idempotent (`messages` ใช้ deterministic `message_id`)
 
-## Milestone Plan
-See `docs/MILESTONE_01_EXECUTION_PLAN.md` for implementation steps and Definition of Done.
+## แผน Milestone
+- แผนดำเนินงาน: `docs/MILESTONE_01_EXECUTION_PLAN.md`
+- API reference: `docs/API_REFERENCE.md`
+- รายงานทดสอบ: `docs/MILESTONE_01_TEST_REPORT.md`
+- Release note: `docs/MILESTONE_01_RELEASE_NOTE.md`
