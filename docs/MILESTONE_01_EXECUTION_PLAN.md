@@ -64,6 +64,41 @@
 - [x] เอกสาร API examples พร้อมสำหรับทีมใช้งาน
 - [x] Smoke test รอบสุดท้ายผ่านและบันทึกผล
 
+## M1 UI Gap Closure (ต้องปิดก่อนขึ้น M2)
+### Scope Freeze (M1)
+- ไม่เพิ่มฟีเจอร์ใหม่จนกว่าจะปิด UI gap ที่ค้าง
+- โฟกัสเฉพาะความครบถ้วน, ความชัดเจน, และความเสถียรของ UI เดิม
+
+### UI Gap List (จัดลำดับความสำคัญ)
+1. Critical (ต้องเสร็จก่อน)
+- ปุ่ม/ฟอร์มหลักใช้งานไม่ได้ หรือพาไปหน้าผิด
+- state สำคัญไม่ครบจนเกิดการใช้งานผิด เช่น ไม่มี `loading`, `error`, `empty`
+- บันทึกสำเร็จไม่ชัดเจน ทำให้ผู้ใช้กดซ้ำหรือคิดว่าข้อมูลหาย
+
+2. Important (ควรเสร็จในรอบเดียวกัน)
+- label/screen title ไม่สื่อความหมาย
+- ลำดับการใช้งานสับสน ต้องกดหลายขั้นเกินจำเป็น
+- mobile layout ใช้งานได้แต่มีจุดติดขัด (scroll/spacing/tap area)
+
+3. Polish (ทำเมื่อ 2 ระดับแรกผ่าน)
+- spacing/alignment/consistency ของ component
+- รูปแบบปุ่ม/สี/สถานะ ไม่สม่ำเสมอทั้งระบบ
+
+### UI Definition of Done (M1)
+- ทุกหน้าที่ใช้งานจริงมี state ครบ: `loading`, `empty`, `error`, `success`
+- ฟอร์มหลักมี validation ครบ และแสดงข้อความผิดพลาดที่เข้าใจได้
+- ปุ่มบันทึกมีสถานะ `disabled/processing` ระหว่างบันทึก
+- หลังบันทึกมีผลลัพธ์ที่ยืนยันได้ชัดเจน (success toast/message)
+- ไม่มี UI blocker ระดับ Critical ค้าง
+- รองรับการใช้งานบน desktop และ mobile ตาม flow หลักที่ตกลง
+
+### Go/No-Go Gate ก่อนเริ่ม M2
+- [ ] Critical UI gaps = 0
+- [ ] Important UI gaps ปิดอย่างน้อย 90%
+- [ ] ผ่าน UAT สั้น 1 รอบ (happy path + error path)
+- [ ] อัปเดตหลักฐานใน `MILESTONE_01_TEST_REPORT.md`
+- [ ] Owner อนุมัติ baseline M1 อย่างเป็นทางการ
+
 ## Risks
 - ACL เปลี่ยนจนเห็นข้อมูลไม่ครบ
 - ไฟล์ session ขนาดใหญ่ทำให้ ingestion ช้าลง

@@ -79,6 +79,61 @@ class Handler(SimpleHTTPRequestHandler):
                     ).fetchall()
             return self._json([dict(r) for r in rows])
 
+        if parsed.path == "/api/search_messages":
+            q = parse_qs(parsed.query)
+            owner = (q.get("owner") or [""])[0].strip()
+            keyword = (q.get("q") or [""])[0].strip()
+            limit = self._parse_limit((q.get("limit") or [None])[0])
+            if limit is None:
+                return self._error("INVALID_LIMIT", f"limit must be a positive integer (1-{MAX_LIMIT})")
+            if owner and owner not in SESSION_ROOTS:
+                allowed = ", ".join(sorted(SESSION_ROOTS.keys()))
+                return self._error("INVALID_OWNER", f"owner must be one of: {allowed}")
+            if not keyword:
+                return self._error("MISSING_QUERY", "q is required")
+            like = f"%{keyword}%"
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.row_factory = sqlite3.Row
+                if owner:
+                    rows = conn.execute(
+                        """
+                        SELECT
+                          s.session_id,
+                          s.owner,
+                          s.started_at_bkk,
+                          s.ended_at_bkk,
+                          s.message_count,
+                          COUNT(m.message_id) AS hit_count
+                        FROM messages m
+                        JOIN sessions s ON s.session_id = m.session_id
+                        WHERE s.owner = ? AND m.text LIKE ?
+                        GROUP BY s.session_id, s.owner, s.started_at_bkk, s.ended_at_bkk, s.message_count, s.ended_at_utc
+                        ORDER BY hit_count DESC, COALESCE(s.ended_at_utc, '') DESC
+                        LIMIT ?
+                        """,
+                        (owner, like, limit),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        """
+                        SELECT
+                          s.session_id,
+                          s.owner,
+                          s.started_at_bkk,
+                          s.ended_at_bkk,
+                          s.message_count,
+                          COUNT(m.message_id) AS hit_count
+                        FROM messages m
+                        JOIN sessions s ON s.session_id = m.session_id
+                        WHERE m.text LIKE ?
+                        GROUP BY s.session_id, s.owner, s.started_at_bkk, s.ended_at_bkk, s.message_count, s.ended_at_utc
+                        ORDER BY hit_count DESC, COALESCE(s.ended_at_utc, '') DESC
+                        LIMIT ?
+                        """,
+                        (like, limit),
+                    ).fetchall()
+            return self._json([dict(r) for r in rows])
+
         if parsed.path == "/api/messages":
             q = parse_qs(parsed.query)
             session_id = (q.get("session_id") or [""])[0].strip()

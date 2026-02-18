@@ -5,27 +5,327 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TCI-GLTP v3</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; background: #f7f9fc; color: #1f2532; }
-    h1 { margin: 0 0 12px 0; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-    select, input { padding: 8px 10px; border: 1px solid #ccd6e6; border-radius: 8px; }
-    button { padding: 8px 12px; border: 0; border-radius: 8px; background: #0f5ec7; color: #fff; cursor: pointer; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .card { background: #fff; border: 1px solid #dfe5ef; border-radius: 10px; overflow: hidden; }
-    .card h3 { margin: 0; padding: 10px 12px; background: #f3f6fb; font-size: 15px; }
-    .list { max-height: 72vh; overflow: auto; }
-    .item { padding: 10px 12px; border-top: 1px solid #edf1f7; cursor: pointer; }
-    .item:hover { background: #f8fbff; }
-    .meta { color: #5e6778; font-size: 12px; }
-    .msg { padding: 10px 12px; border-top: 1px solid #edf1f7; }
-    .msg .meta { margin-bottom: 4px; }
-    .USER { border-left: 4px solid #2f7fd8; }
-    .AI { border-left: 4px solid #1e9a6c; }
-    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+    :root {
+      --bg: #eef2f6;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --text: #1f2937;
+      --muted: #5b6678;
+      --border: #d9e1ec;
+      --border-soft: #e8edf4;
+      --primary: #2b5fae;
+      --primary-hover: #234f93;
+      --primary-soft: #dce9fa;
+      --ai-accent: #1e9a6c;
+      --user-accent: #2f7fd8;
+      --hl: #f7e7a8;
+      --hl-active: #f2d27a;
+      --danger: #c0392b;
+    }
+
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      margin: 20px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      margin: 0 0 12px 0;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    select,
+    input {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    input[type="search"] {
+      min-width: 320px;
+      width: min(48vw, 600px);
+    }
+
+    button {
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #4b607c;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.85fr) minmax(420px, 1.45fr);
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 72vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h3 {
+      margin: 0;
+      padding: 10px 12px;
+      background: var(--surface-muted);
+      font-size: 17px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .list {
+      max-height: 72vh;
+      overflow: auto;
+    }
+
+    .item {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border-soft);
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+
+    .item:hover {
+      background: #f5f8fc;
+    }
+
+    .item.selected {
+      background: var(--primary-soft);
+      border-left-color: var(--primary);
+      border-left-width: 6px;
+      box-shadow: inset 0 0 0 1px #c7daf6, 0 0 0 1px var(--primary-soft);
+    }
+
+    .item.selected .name {
+      font-weight: 800;
+    }
+
+    .session-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.25;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .session-title .name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      background: #e7effb;
+      color: var(--primary-hover);
+      padding: 2px 6px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .state {
+      padding: 14px 12px;
+      color: var(--muted);
+      font-size: 14px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .state.error {
+      color: var(--danger);
+    }
+
+    .messages-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface-muted);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .messages-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mini-btn {
+      background: #4b607c;
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    .msg {
+      padding: 12px 14px;
+      margin: 10px 10px 0 10px;
+      border: 1px solid var(--border);
+      border-left: 6px solid transparent;
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    }
+
+    .msg .meta {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .msg.USER {
+      border-left-color: var(--user-accent);
+      background: #f7faff;
+    }
+
+    .msg.AI {
+      border-left-color: var(--ai-accent);
+      background: #f7fcf9;
+    }
+
+    .msg + .msg {
+      margin-top: 12px;
+    }
+
+    .msg-role {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 1px 6px;
+      margin-left: 6px;
+      color: var(--muted);
+    }
+
+    .msg-content {
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 72ch;
+      color: var(--text);
+    }
+
+    .msg-content p {
+      margin: 0 0 10px 0;
+    }
+
+    .msg-content ul,
+    .msg-content ol {
+      margin: 0 0 10px 20px;
+      padding: 0;
+    }
+
+    .msg-content li {
+      margin: 3px 0;
+    }
+
+    .msg-content h4,
+    .msg-content h5,
+    .msg-content h6 {
+      margin: 8px 0 8px;
+      line-height: 1.35;
+    }
+
+    .msg-content pre {
+      margin: 0 0 10px 0;
+      background: var(--surface-muted);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .msg-content code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.95em;
+      background: #eef3f8;
+      border-radius: 4px;
+      padding: 0 4px;
+    }
+
+    mark.hl {
+      background: var(--hl);
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    mark.hl.active {
+      background: var(--hl-active);
+      outline: 1px solid #c49d4c;
+      box-shadow: 0 0 0 2px rgba(242, 210, 122, 0.35);
+    }
+
+    .copy-btn {
+      background: #4b607c;
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 960px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      input[type="search"] {
+        width: 100%;
+        min-width: 220px;
+      }
+
+      .msg-content {
+        max-width: none;
+      }
+    }
   </style>
 </head>
 <body>
   <h1>TCI-GLTP v3</h1>
+
   <div class="row">
     <label>Owner
       <select id="owner">
@@ -40,6 +340,20 @@
     <button id="downloadCsv" disabled>Download CSV</button>
     <button id="downloadMd" disabled>Download Markdown</button>
     <span class="meta" id="status"></span>
+  </div>
+
+  <div class="row">
+    <label for="searchInput">Search
+      <input id="searchInput" type="search" placeholder="ค้นหาข้อความ..." />
+    </label>
+    <label for="searchSort">Sort
+      <select id="searchSort">
+        <option value="relevance">Relevance</option>
+        <option value="latest">Latest</option>
+      </select>
+    </label>
+    <button id="clearSearch" class="btn-secondary">Clear</button>
+    <span class="meta" id="searchStatus"></span>
   </div>
 
   <div class="grid">
@@ -59,14 +373,80 @@
     const sessionsEl = document.getElementById('sessions');
     const messagesEl = document.getElementById('messages');
     const statusEl = document.getElementById('status');
+    const searchStatusEl = document.getElementById('searchStatus');
     const downloadJsonBtn = document.getElementById('downloadJson');
     const downloadCsvBtn = document.getElementById('downloadCsv');
     const downloadMdBtn = document.getElementById('downloadMd');
+    const searchInput = document.getElementById('searchInput');
+    const searchSort = document.getElementById('searchSort');
+    const clearSearchBtn = document.getElementById('clearSearch');
+
     let currentSessionId = '';
     let currentMessages = [];
+    let currentSessions = [];
+    let highlightNodes = [];
+    let activeHighlightIdx = -1;
+    let searchTimer = null;
+    let sessionsController = null;
+    let messagesController = null;
+    let sessionsRequestId = 0;
+    let messagesRequestId = 0;
 
     function sanitizeFileName(input) {
       return (input || 'session').replace(/[^a-zA-Z0-9._-]+/g, '_');
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function escapeRegex(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function compactSessionName(sessionId) {
+      const leaf = (sessionId || '').split('/').pop() || sessionId || '-';
+      if (leaf.length <= 46) return leaf;
+      return `${leaf.slice(0, 20)}...${leaf.slice(-16)}`;
+    }
+
+    function sortSessions(items) {
+      const keyword = searchInput.value.trim();
+      const sortMode = searchSort.value;
+      const sorted = [...items];
+      if (keyword && sortMode === 'relevance') {
+        sorted.sort((a, b) => {
+          const hitDiff = Number(b.hit_count || 0) - Number(a.hit_count || 0);
+          if (hitDiff !== 0) return hitDiff;
+          return String(b.ended_at_bkk || '').localeCompare(String(a.ended_at_bkk || ''));
+        });
+        return sorted;
+      }
+      sorted.sort((a, b) => String(b.ended_at_bkk || '').localeCompare(String(a.ended_at_bkk || '')));
+      return sorted;
+    }
+
+    function updateSearchSortState() {
+      const hasKeyword = searchInput.value.trim().length > 0;
+      searchSort.disabled = !hasKeyword;
+      if (!hasKeyword) {
+        searchSort.value = 'relevance';
+      }
+    }
+
+    function renderState(el, message, isError = false) {
+      el.innerHTML = `<div class="state ${isError ? 'error' : ''}">${escapeHtml(message)}</div>`;
+    }
+
+    function setDownloadEnabled(enabled) {
+      downloadJsonBtn.disabled = !enabled;
+      downloadCsvBtn.disabled = !enabled;
+      downloadMdBtn.disabled = !enabled;
     }
 
     function downloadTextFile(content, filename, mimeType) {
@@ -79,42 +459,6 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    }
-
-    function setDownloadEnabled(enabled) {
-      downloadJsonBtn.disabled = !enabled;
-      downloadCsvBtn.disabled = !enabled;
-      downloadMdBtn.disabled = !enabled;
-    }
-
-    async function loadSessions() {
-      const query = owner.value ? `?owner=${encodeURIComponent(owner.value)}` : '';
-      const res = await fetch(`/api/sessions${query}`);
-      const data = await res.json();
-      sessionsEl.innerHTML = '';
-      data.forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = `<div>${s.session_id}</div><div class="meta">${s.started_at_bkk || '-'} -> ${s.ended_at_bkk || '-'} | ${s.message_count} msgs</div>`;
-        div.onclick = () => loadMessages(s.session_id);
-        sessionsEl.appendChild(div);
-      });
-      statusEl.textContent = `Sessions: ${data.length}`;
-    }
-
-    async function loadMessages(sessionId) {
-      const res = await fetch(`/api/messages?session_id=${encodeURIComponent(sessionId)}`);
-      const data = await res.json();
-      currentSessionId = sessionId;
-      currentMessages = data;
-      setDownloadEnabled(data.length > 0);
-      messagesEl.innerHTML = '';
-      data.forEach(m => {
-        const div = document.createElement('div');
-        div.className = `msg ${m.role}`;
-        div.innerHTML = `<div class="meta">${m.ts_bkk} | ${m.role}</div><div>${(m.text || '').replaceAll('<', '&lt;')}</div>`;
-        messagesEl.appendChild(div);
-      });
     }
 
     function toCsv(rows) {
@@ -138,27 +482,437 @@
       return lines.join('\n');
     }
 
+    function updateSessionList(items) {
+      sessionsEl.innerHTML = '';
+      if (!items.length) {
+        renderState(sessionsEl, 'ไม่พบรายการ session');
+        return;
+      }
+
+      const keyword = searchInput.value.trim();
+      items.forEach(s => {
+        const div = document.createElement('div');
+        div.className = `item ${s.session_id === currentSessionId ? 'selected' : ''}`;
+        const hitBadge = keyword && s.hit_count ? `<span class="badge">${s.hit_count} hits</span>` : '';
+        div.innerHTML = `
+          <div class="session-title">
+            <span class="name">${escapeHtml(s.owner || '-')} - ${escapeHtml(compactSessionName(s.session_id))}</span>
+            ${hitBadge}
+          </div>
+          <div class="meta">${escapeHtml(s.started_at_bkk || '-')} -> ${escapeHtml(s.ended_at_bkk || '-')} | ${escapeHtml(String(s.message_count || 0))} msgs</div>
+        `;
+        div.onclick = () => loadMessages(s.session_id);
+        sessionsEl.appendChild(div);
+      });
+    }
+
+    function flushParagraph(paragraphLines, htmlParts) {
+      if (!paragraphLines.length) return;
+      const text = paragraphLines.join('<br>');
+      htmlParts.push(`<p>${text}</p>`);
+      paragraphLines.length = 0;
+    }
+
+    function flushList(listType, listItems, htmlParts) {
+      if (!listType || !listItems.length) return;
+      htmlParts.push(`<${listType}>${listItems.map(item => `<li>${item}</li>`).join('')}</${listType}>`);
+      listItems.length = 0;
+    }
+
+    function renderRichText(rawText) {
+      const lines = String(rawText || '').replace(/\r\n/g, '\n').split('\n');
+      const htmlParts = [];
+      const paragraphLines = [];
+      const listItems = [];
+      let listType = '';
+      let inCode = false;
+      let codeLines = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (inCode) {
+          if (trimmed.startsWith('```')) {
+            htmlParts.push(`<pre><code>${codeLines.join('\n')}</code></pre>`);
+            codeLines = [];
+            inCode = false;
+          } else {
+            codeLines.push(escapeHtml(line));
+          }
+          continue;
+        }
+
+        if (trimmed.startsWith('```')) {
+          flushParagraph(paragraphLines, htmlParts);
+          flushList(listType, listItems, htmlParts);
+          listType = '';
+          inCode = true;
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,3})\s+(.*)$/);
+        if (heading) {
+          flushParagraph(paragraphLines, htmlParts);
+          flushList(listType, listItems, htmlParts);
+          listType = '';
+          const level = Math.min(6, heading[1].length + 3);
+          htmlParts.push(`<h${level}>${escapeHtml(heading[2])}</h${level}>`);
+          continue;
+        }
+
+        const unordered = line.match(/^\s*[-*]\s+(.*)$/);
+        if (unordered) {
+          flushParagraph(paragraphLines, htmlParts);
+          if (listType && listType !== 'ul') {
+            flushList(listType, listItems, htmlParts);
+          }
+          listType = 'ul';
+          listItems.push(escapeHtml(unordered[1]));
+          continue;
+        }
+
+        const ordered = line.match(/^\s*\d+\.\s+(.*)$/);
+        if (ordered) {
+          flushParagraph(paragraphLines, htmlParts);
+          if (listType && listType !== 'ol') {
+            flushList(listType, listItems, htmlParts);
+          }
+          listType = 'ol';
+          listItems.push(escapeHtml(ordered[1]));
+          continue;
+        }
+
+        if (trimmed === '') {
+          flushParagraph(paragraphLines, htmlParts);
+          flushList(listType, listItems, htmlParts);
+          listType = '';
+          continue;
+        }
+
+        if (listType) {
+          flushList(listType, listItems, htmlParts);
+          listType = '';
+        }
+        paragraphLines.push(escapeHtml(line));
+      }
+
+      if (inCode) {
+        htmlParts.push(`<pre><code>${codeLines.join('\n')}</code></pre>`);
+      }
+      flushParagraph(paragraphLines, htmlParts);
+      flushList(listType, listItems, htmlParts);
+
+      return htmlParts.join('');
+    }
+
+    function highlightInElement(root, keyword) {
+      if (!keyword) return 0;
+      const pattern = new RegExp(escapeRegex(keyword), 'gi');
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+      }
+
+      let count = 0;
+      textNodes.forEach(node => {
+        if (!node.nodeValue || !pattern.test(node.nodeValue)) return;
+        pattern.lastIndex = 0;
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+
+        node.nodeValue.replace(pattern, (match, offset) => {
+          if (offset > cursor) {
+            fragment.appendChild(document.createTextNode(node.nodeValue.slice(cursor, offset)));
+          }
+          const mark = document.createElement('mark');
+          mark.className = 'hl';
+          mark.textContent = match;
+          fragment.appendChild(mark);
+          cursor = offset + match.length;
+          count += 1;
+          return match;
+        });
+
+        if (cursor < node.nodeValue.length) {
+          fragment.appendChild(document.createTextNode(node.nodeValue.slice(cursor)));
+        }
+
+        node.parentNode.replaceChild(fragment, node);
+      });
+
+      return count;
+    }
+
+    function collectHighlights() {
+      highlightNodes = Array.from(messagesEl.querySelectorAll('mark.hl'));
+      if (!highlightNodes.length) {
+        activeHighlightIdx = -1;
+        return;
+      }
+      activeHighlightIdx = 0;
+      setActiveHighlight(activeHighlightIdx, false);
+    }
+
+    function setActiveHighlight(idx, scroll = true) {
+      if (!highlightNodes.length) return;
+      highlightNodes.forEach(node => node.classList.remove('active'));
+      const normalizedIdx = ((idx % highlightNodes.length) + highlightNodes.length) % highlightNodes.length;
+      activeHighlightIdx = normalizedIdx;
+      const active = highlightNodes[normalizedIdx];
+      active.classList.add('active');
+      if (scroll) {
+        active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      const counter = document.getElementById('matchCounter');
+      counter.textContent = `${normalizedIdx + 1}/${highlightNodes.length}`;
+    }
+
+    function goToNextMatch() {
+      if (!highlightNodes.length) return;
+      setActiveHighlight(activeHighlightIdx + 1);
+    }
+
+    function goToPrevMatch() {
+      if (!highlightNodes.length) return;
+      setActiveHighlight(activeHighlightIdx - 1);
+    }
+
+    async function copyText(value) {
+      try {
+        await navigator.clipboard.writeText(value || '');
+      } catch (_err) {
+        // Fail silently to keep flow smooth for users without clipboard permission.
+      }
+    }
+
+    function renderMessagesHeader() {
+      const sessionLabel = currentSessionId ? `${currentSessionId}` : 'ยังไม่ได้เลือก session';
+      const header = document.createElement('div');
+      header.className = 'messages-header';
+      header.innerHTML = `
+        <div class="meta">Session: ${escapeHtml(sessionLabel)}</div>
+        <div class="messages-actions">
+          <span class="meta" id="matchCounter">0/0</span>
+          <button class="mini-btn" id="prevMatch">Prev</button>
+          <button class="mini-btn" id="nextMatch">Next</button>
+          <button class="mini-btn" id="jumpLatest">Jump latest</button>
+        </div>
+      `;
+      messagesEl.appendChild(header);
+      document.getElementById('prevMatch').onclick = goToPrevMatch;
+      document.getElementById('nextMatch').onclick = goToNextMatch;
+      document.getElementById('jumpLatest').onclick = () => {
+        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+      };
+    }
+
+    function renderMessages(rows, keyword) {
+      messagesEl.innerHTML = '';
+      renderMessagesHeader();
+
+      if (!rows.length) {
+        renderState(messagesEl, 'ไม่พบข้อความใน session นี้');
+        searchStatusEl.textContent = keyword ? 'ไม่พบคำค้นในข้อความของ session ที่เลือก' : '';
+        return;
+      }
+
+      let totalMatches = 0;
+      rows.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `msg ${m.role || ''}`;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `${escapeHtml(m.ts_bkk || '-')}<span class="msg-role">${escapeHtml(m.role || '-')}</span>`;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = () => copyText(m.text || '');
+
+        const metaWrap = document.createElement('div');
+        metaWrap.style.display = 'flex';
+        metaWrap.style.justifyContent = 'space-between';
+        metaWrap.style.alignItems = 'center';
+        metaWrap.style.gap = '8px';
+        metaWrap.appendChild(meta);
+        metaWrap.appendChild(copyBtn);
+
+        const content = document.createElement('div');
+        content.className = 'msg-content';
+        content.innerHTML = renderRichText(m.text || '');
+        totalMatches += highlightInElement(content, keyword);
+
+        div.appendChild(metaWrap);
+        div.appendChild(content);
+        messagesEl.appendChild(div);
+      });
+
+      collectHighlights();
+      if (!keyword) {
+        searchStatusEl.textContent = '';
+      } else if (totalMatches === 0) {
+        searchStatusEl.textContent = 'ไม่พบคำค้นใน session ที่เลือก';
+      } else {
+        searchStatusEl.textContent = `พบคำค้น ${totalMatches} จุดใน session นี้`;
+      }
+    }
+
+    async function loadMessages(sessionId, options = {}) {
+      const { reason = 'manual' } = options;
+      if (!sessionId) return;
+      const previousSessionId = currentSessionId;
+      currentSessionId = sessionId;
+      updateSessionList(currentSessions);
+      const shouldShowLoading = reason !== 'auto' && (!currentMessages.length || previousSessionId !== sessionId);
+      if (shouldShowLoading) {
+        renderState(messagesEl, 'กำลังโหลดข้อความ...');
+      }
+      const requestId = ++messagesRequestId;
+      if (messagesController) {
+        messagesController.abort();
+      }
+      messagesController = new AbortController();
+      try {
+        const res = await fetch(`/api/messages?session_id=${encodeURIComponent(sessionId)}`, {
+          signal: messagesController.signal,
+        });
+        if (!res.ok) {
+          throw new Error(`messages request failed: ${res.status}`);
+        }
+        const data = await res.json();
+        if (requestId !== messagesRequestId) {
+          return;
+        }
+        currentMessages = data;
+        setDownloadEnabled(data.length > 0);
+        renderMessages(data, searchInput.value.trim());
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          return;
+        }
+        setDownloadEnabled(false);
+        renderState(messagesEl, `โหลดข้อความไม่สำเร็จ: ${err.message}`, true);
+      }
+    }
+
+    async function fetchSessions(signal) {
+      const keyword = searchInput.value.trim();
+      const ownerQuery = owner.value ? `owner=${encodeURIComponent(owner.value)}&` : '';
+
+      if (keyword) {
+        const res = await fetch(`/api/search_messages?${ownerQuery}q=${encodeURIComponent(keyword)}`, { signal });
+        if (!res.ok) {
+          throw new Error(`search request failed: ${res.status}`);
+        }
+        return await res.json();
+      }
+
+      const query = owner.value ? `?owner=${encodeURIComponent(owner.value)}` : '';
+      const res = await fetch(`/api/sessions${query}`, { signal });
+      if (!res.ok) {
+        throw new Error(`sessions request failed: ${res.status}`);
+      }
+      return await res.json();
+    }
+
+    async function loadSessions(options = {}) {
+      const { reason = 'manual' } = options;
+      updateSearchSortState();
+      if (!(reason === 'auto' && currentSessions.length > 0)) {
+        renderState(sessionsEl, 'กำลังโหลด sessions...');
+      }
+      const requestId = ++sessionsRequestId;
+      if (sessionsController) {
+        sessionsController.abort();
+      }
+      sessionsController = new AbortController();
+      try {
+        const data = await fetchSessions(sessionsController.signal);
+        if (requestId !== sessionsRequestId) {
+          return;
+        }
+        const sortedData = sortSessions(data);
+        currentSessions = sortedData;
+
+        if (!sortedData.length) {
+          currentSessionId = '';
+          currentMessages = [];
+          setDownloadEnabled(false);
+          updateSessionList([]);
+          renderState(messagesEl, 'เลือก session เพื่อดูข้อความ');
+          statusEl.textContent = 'Sessions: 0';
+          if (searchInput.value.trim()) {
+            searchStatusEl.textContent = 'ไม่พบ session ที่ตรงกับคำค้น';
+          } else {
+            searchStatusEl.textContent = '';
+          }
+          return;
+        }
+
+        if (!currentSessionId || !sortedData.some(s => s.session_id === currentSessionId)) {
+          currentSessionId = sortedData[0].session_id;
+        }
+
+        updateSessionList(sortedData);
+        statusEl.textContent = `Sessions: ${sortedData.length}`;
+        if (searchInput.value.trim()) {
+          searchStatusEl.textContent = `พบ ${sortedData.length} session ที่มีคำค้น`;
+        }
+
+        await loadMessages(currentSessionId, { reason });
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          return;
+        }
+        statusEl.textContent = 'Sessions: error';
+        renderState(sessionsEl, `โหลดรายการ sessions ไม่สำเร็จ: ${err.message}`, true);
+        renderState(messagesEl, 'โหลดข้อความไม่ได้เนื่องจากรายการ session ผิดพลาด', true);
+      }
+    }
+
+    function queueSearch() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        loadSessions({ reason: 'search' });
+      }, 250);
+    }
+
     owner.onchange = loadSessions;
     reloadBtn.onclick = loadSessions;
+    searchInput.oninput = queueSearch;
+    searchSort.onchange = loadSessions;
+    clearSearchBtn.onclick = () => {
+      searchInput.value = '';
+      searchStatusEl.textContent = '';
+      updateSearchSortState();
+      loadSessions({ reason: 'manual' });
+    };
+
     downloadJsonBtn.onclick = () => {
       if (!currentSessionId || currentMessages.length === 0) return;
       const payload = JSON.stringify({ session_id: currentSessionId, messages: currentMessages }, null, 2);
       downloadTextFile(payload, `${sanitizeFileName(currentSessionId)}.json`, 'application/json;charset=utf-8');
     };
+
     downloadCsvBtn.onclick = () => {
       if (!currentSessionId || currentMessages.length === 0) return;
       downloadTextFile(toCsv(currentMessages), `${sanitizeFileName(currentSessionId)}.csv`, 'text/csv;charset=utf-8');
     };
+
     downloadMdBtn.onclick = () => {
       if (!currentSessionId || currentMessages.length === 0) return;
       downloadTextFile(toMarkdown(currentSessionId, currentMessages), `${sanitizeFileName(currentSessionId)}.md`, 'text/markdown;charset=utf-8');
     };
 
     setDownloadEnabled(false);
-    loadSessions();
+    renderState(messagesEl, 'เลือก session เพื่อดูข้อความ');
+    loadSessions({ reason: 'manual' });
+
     setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        loadSessions();
+      if (document.visibilityState === 'visible' && !searchInput.value.trim()) {
+        loadSessions({ reason: 'auto' });
       }
     }, 10000);
   </script>
