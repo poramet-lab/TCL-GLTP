@@ -330,9 +330,6 @@
     <label>Owner
       <select id="owner">
         <option value="">All</option>
-        <option value="poramet">poramet</option>
-        <option value="support">support</option>
-        <option value="first">first</option>
       </select>
     </label>
     <button id="reload">Reload</button>
@@ -906,9 +903,25 @@
       downloadTextFile(toMarkdown(currentSessionId, currentMessages), `${sanitizeFileName(currentSessionId)}.md`, 'text/markdown;charset=utf-8');
     };
 
+    async function loadOwners() {
+      try {
+        const res = await fetch('/api/owners');
+        if (!res.ok) return;
+        const owners = await res.json();
+        owners.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          owner.appendChild(opt);
+        });
+      } catch (_err) {
+        // Owner list will just show "All" if fetch fails.
+      }
+    }
+
     setDownloadEnabled(false);
     renderState(messagesEl, 'เลือก session เพื่อดูข้อความ');
-    loadSessions({ reason: 'manual' });
+    loadOwners().then(() => loadSessions({ reason: 'manual' }));
 
     setInterval(() => {
       if (document.visibilityState === 'visible' && !searchInput.value.trim()) {

@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
+import signal
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +16,16 @@ from tci_gltp.db import connect, init_schema
 
 TZ_BKK = ZoneInfo("Asia/Bangkok")
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+
+log = logging.getLogger(__name__)
+
+_shutdown = False
+
+
+def _handle_signal(signum: int, _frame: object) -> None:
+    global _shutdown
+    log.info("received signal %s, shutting down", signum)
+    _shutdown = True
 
 
 def to_bkk(ts: str) -> str:
@@ -94,10 +106,7 @@ def upsert_session(conn: sqlite3.Connection, session_row: tuple) -> None:
     )
 
 
-def ingest_once() -> tuple[int, int]:
-    conn = connect(DB_PATH)
-    init_schema(conn, SCHEMA_PATH)
-
+def ingest_once(conn: sqlite3.Connection) -> tuple[int, int]:
     sessions = 0
     messages = 0
 
@@ -129,7 +138,7 @@ def ingest_once() -> tuple[int, int]:
         )
         sessions += 1
 
-        conn.executemany(
+        cursor = conn.executemany(
             """
             INSERT INTO messages(message_id, session_id, owner, ts_utc, ts_bkk, role, text)
             VALUES(?,?,?,?,?,?,?)
@@ -137,38 +146,67 @@ def ingest_once() -> tuple[int, int]:
             """,
             msg_rows,
         )
-        messages += len(msg_rows)
+        messages += cursor.rowcount
 
     conn.commit()
-    conn.close()
     return sessions, messages
 
 
+def _file_signatures() -> tuple[tuple[str, int, int], ...]:
+    sig: list[tuple[str, int, int]] = []
+    for _, _, p in iter_source_files():
+        try:
+            st = p.stat()
+            sig.append((str(p), st.st_mtime_ns, st.st_size))
+        except OSError:
+            continue
+    return tuple(sorted(sig))
+
+
 def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--interval", type=float, default=3.0)
     args = parser.parse_args()
 
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
+
+    conn = connect(DB_PATH)
+    init_schema(conn, SCHEMA_PATH)
+
     if not args.watch:
-        s, m = ingest_once()
-        print(f"ingested sessions={s} messages={m}")
+        try:
+            s, m = ingest_once(conn)
+            log.info("ingested sessions=%d messages=%d", s, m)
+        finally:
+            conn.close()
         return 0
 
     import time
 
     last_sig: tuple[tuple[str, int, int], ...] | None = None
-    while True:
-        sig: list[tuple[str, int, int]] = []
-        for _, _, p in iter_source_files():
-            st = p.stat()
-            sig.append((str(p), st.st_mtime_ns, st.st_size))
-        cur = tuple(sorted(sig))
-        if cur != last_sig:
-            s, m = ingest_once()
-            print(f"watch ingest sessions={s} messages={m}")
-            last_sig = cur
-        time.sleep(max(0.5, args.interval))
+    try:
+        while not _shutdown:
+            try:
+                cur = _file_signatures()
+                if cur != last_sig:
+                    s, m = ingest_once(conn)
+                    log.info("watch ingest sessions=%d messages=%d", s, m)
+                    last_sig = cur
+            except Exception:
+                log.exception("ingest cycle failed, will retry next interval")
+            time.sleep(max(0.5, args.interval))
+    finally:
+        conn.close()
+        log.info("ingest watcher stopped")
+
+    return 0
 
 
 if __name__ == "__main__":
